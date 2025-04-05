@@ -6,6 +6,7 @@ from yaml import safe_load
 
 from simulator import Simulator
 
+
 def read_arguments():
     try:
         file_name: str = "inputs/" + str(sys.argv[1]) + ".yaml"
@@ -32,8 +33,10 @@ def run():
     distribution = np.zeros(args["population"]["pop_size"] + 1)
     gens, runs, save = sim_args.values()
 
-    for r in range(1, runs+1):
-        print("Running simulation: " + '|' + r*'█' + (runs-r)* ' ' + f'|{r}/{runs}|')
+    for r in range(1, runs + 1):
+        print(
+            "Running simulation: " + "|" + r * "█" + (runs - r) * " " + f"|{r}/{runs}|"
+        )
         s = Simulator(gens, **args)
         data, filename = s.run()
         distribution += data
@@ -41,10 +44,8 @@ def run():
     distribution = distribution / runs
 
     if save:
-        with open('outputs/' + filename + '.pickle', 'wb') as handle:
+        with open("outputs/" + filename + ".pickle", "wb") as handle:
             pickle.dump(distribution, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
 
 
 if __name__ == "__main__":

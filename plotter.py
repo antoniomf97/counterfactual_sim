@@ -34,11 +34,11 @@ def run():
     data = {}
     idx = 0
     for filename in filenames_cost_91:
-        with open('outputs/' + filename + '.pickle', 'rb') as handle:
+        with open("outputs/" + filename + ".pickle", "rb") as handle:
             data[idx] = pickle.load(handle)
             idx += 1
 
-    labels = ["Immitation", "cost: 0.0", "cost: 0.1" , "cost: 0.3", "cost: 0.5"]
+    labels = ["Immitation", "cost: 0.0", "cost: 0.1", "cost: 0.3", "cost: 0.5"]
     # labels = ["Immitation", "depth: 1", "depth: 2", "depth: 3", "depth: 5", "depth: 10", "depth: 20"]
 
     for i, values in data.items():

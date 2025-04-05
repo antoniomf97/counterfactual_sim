@@ -7,18 +7,17 @@ from player import Player
 from games import NSH, CRD, SH
 
 
-
 class Simulator:
     games = {"NSH": NSH, "CRD": CRD, "SH": SH}
 
     def __init__(self, gens, population, context, **kwargs):
         self.population: list[Player] = []
         self.k: int = 0
-        self.Z: int = population["pop_size"] 
+        self.Z: int = population["pop_size"]
         self.mutation: float = population["mutation"]
         self.beta: float = population["beta"]
         self.game_label = population["game"]
-        self.game = self.games[self.game_label](self.Z, **kwargs[self.game_label])  
+        self.game = self.games[self.game_label](self.Z, **kwargs[self.game_label])
         self.gens: int = gens
 
         self.use_context = population["use_context"]
@@ -68,7 +67,7 @@ class Simulator:
         fitness_A = self.game.fitness(player_A.strategy, k)
         fitness_B = self.game.fitness(player_B.strategy, k)
 
-        p_Fermi = 1./(1. + np.exp(self.beta * (fitness_A - fitness_B)))
+        p_Fermi = 1.0 / (1.0 + np.exp(self.beta * (fitness_A - fitness_B)))
 
         if random.random() <= p_Fermi:
             player_A.strategy = player_B.strategy
@@ -80,7 +79,7 @@ class Simulator:
 
         perceived_k = self.context() * self.Z
 
-        if random.random() < self.mutation:  
+        if random.random() < self.mutation:
             player_A.mutate()
         else:
             # apply the depth distribution statistically
@@ -131,7 +130,7 @@ class Simulator:
 
                     # 4. chose max value of past fitness
                     index_max = np.argmax(fitness_past)
-                    p_Fermi = 1./(
+                    p_Fermi = 1.0 / (
                         1 + np.exp(self.beta * (fitness_now - fitness_past[index_max]))
                     )
                     if random.random() < p_Fermi:
@@ -141,23 +140,26 @@ class Simulator:
             self.k += player_A.strategy - i_strategy
             player_A.context.append(perceived_k)
             player_A.actions.append(player_A.strategy)
-        
+
         self.distribution[self.k] += 1
 
     def run_one_generation(self):
         for _ in self.population:
             self.evolution_step()
-    
+
     def run(self):
 
         for _ in tqdm(range(self.gens)):
             self.run_one_generation()
 
         self.distribution = self.distribution / (self.Z * self.gens)
-    
-        depth = ''.join(e for e in str(self.depth_dist).replace('0.','') if e.isalnum())
 
-        filename = f"{self.game_label}n{self.Z}b{self.beta}{self.game}c{self.cost}d{depth}".replace(".", "").lower()
+        depth = "".join(
+            e for e in str(self.depth_dist).replace("0.", "") if e.isalnum()
+        )
+
+        filename = f"{self.game_label}n{self.Z}b{self.beta}{self.game}c{self.cost}d{depth}".replace(
+            ".", ""
+        ).lower()
 
         return self.distribution, filename
-
