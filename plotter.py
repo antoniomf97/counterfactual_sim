@@ -29,11 +29,12 @@ filenames_5091 = [
     "nshn50b10n6m3f5c10c00d900000000000000000001",
 ]
 
+filenames = ["nshn50b50n6m3f55c10c00d10"]
 
 def run():
     data = {}
     idx = 0
-    for filename in filenames_cost_91:
+    for filename in filenames:
         with open("outputs/" + filename + ".pickle", "rb") as handle:
             data[idx] = pickle.load(handle)
             idx += 1

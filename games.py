@@ -1,28 +1,6 @@
 from scipy.special import binom
 
 
-class SH:
-    """
-    2-Player Stag Hunt Game
-    """
-
-    def __init__(self, Z, R, S, T, P):
-        self.Z: int = Z
-        self.R: float = R
-        self.S: float = S
-        self.T: float = T
-        self.P: float = P
-
-    def __str__(self):
-        return f"r{self.R}s{self.S}t{self.T}p{self.P}"
-
-    def fitness(self, strategy, k, cost=0):
-        if strategy:
-            return ((k - 1) * self.R + (self.Z - k) * self.S) / (self.Z - 1) - cost
-        else:
-            return (k * self.T + (self.Z - k - 1) * self.P) / (self.Z - 1) - cost
-
-
 class NSH:
     """
     N-Player Stag Hunt Game
@@ -71,6 +49,28 @@ class NSH:
                 ]
             )
         return fitness * s - cost
+
+
+class SH:
+    """
+    2-Player Stag Hunt Game
+    """
+
+    def __init__(self, Z, R, S, T, P):
+        self.Z: int = Z
+        self.R: float = R
+        self.S: float = S
+        self.T: float = T
+        self.P: float = P
+
+    def __str__(self):
+        return f"r{self.R}s{self.S}t{self.T}p{self.P}"
+
+    def fitness(self, strategy, k, cost=0):
+        if strategy:
+            return ((k - 1) * self.R + (self.Z - k) * self.S) / (self.Z - 1) - cost
+        else:
+            return (k * self.T + (self.Z - k - 1) * self.P) / (self.Z - 1) - cost
 
 
 class CRD:

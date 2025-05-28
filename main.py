@@ -1,7 +1,10 @@
+import os
 import sys
+import uuid
 import pickle
+import multiprocessing as mp
 
-import numpy as np
+from tqdm import tqdm
 from yaml import safe_load
 
 from simulator import Simulator
@@ -20,33 +23,38 @@ def read_arguments():
         data = safe_load(f)
 
     try:
-        return data["simulation"], {
-            k: data[k] for k in ("population", "context", data["population"]["game"])
-        }
+        return data["running"], (data["simulation"], data[data["simulation"]["game"]])
     except:
         raise ValueError(f"Game '{data['population']['game']}' not defined.")
 
 
-def run():
-    sim_args, args = read_arguments()
+def run_simulation(args):
+    simulation, parameters = args
+    sim = Simulator(simulation, parameters)
+    
+    sim.run()
 
-    distribution = np.zeros(args["population"]["pop_size"] + 1)
-    gens, runs, save = sim_args.values()
 
-    for r in range(1, runs + 1):
-        print(
-            "Running simulation: " + "|" + r * "█" + (runs - r) * " " + f"|{r}/{runs}|"
+def run_simulations(run_args, sim_args, clear_data=True):
+    outdir = f"./outputs/{uuid.uuid1()}"
+    os.mkdir(outdir)
+    sim_args[0]["outdir"] = outdir
+    
+    num_cores = mp.cpu_count() - 1 if run_args["cores"] == "all" else run_args["cores"]
+
+    print("============ Running experiment of", run_args["runs"],
+          "simulations in", num_cores, "cores: ============")
+
+    print("Pooling processes...")
+    with mp.Pool(processes=num_cores) as pool:
+        list(
+            tqdm(pool.imap(run_simulation, [sim_args] * run_args["runs"]), total=run_args["runs"])
         )
-        s = Simulator(gens, **args)
-        data, filename = s.run()
-        distribution += data
 
-    distribution = distribution / runs
-
-    if save:
-        with open("outputs/" + filename + ".pickle", "wb") as handle:
-            pickle.dump(distribution, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    print("Simulations done. Processing results...")
 
 
 if __name__ == "__main__":
-    run()
+    run_args, sim_args = read_arguments()
+    run_simulation(sim_args)
+    
