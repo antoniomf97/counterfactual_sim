@@ -17,13 +17,13 @@ class NSH:
         return f"n{self.N}m{self.M}f{self.F}c{self.c}".replace(".", "")
 
     def payoff(self, strategy, k):
-        if strategy:
-            if 1 <= k < self.M:
+        if strategy == 1:
+            if 0 <= k < self.M:
                 return -self.c
             else:
                 return k * self.F * self.c / self.N - self.c
         else:
-            if 1 <= k < self.M:
+            if 0 <= k < self.M:
                 return 0
             else:
                 return k * self.F * self.c / self.N
@@ -51,44 +51,44 @@ class NSH:
         return fitness * s - cost
 
 
-class SH:
-    """
-    2-Player Stag Hunt Game
-    """
+# class SH:
+#     """
+#     2-Player Stag Hunt Game
+#     """
 
-    def __init__(self, Z, R, S, T, P):
-        self.Z: int = Z
-        self.R: float = R
-        self.S: float = S
-        self.T: float = T
-        self.P: float = P
+#     def __init__(self, Z, R, S, T, P):
+#         self.Z: int = Z
+#         self.R: float = R
+#         self.S: float = S
+#         self.T: float = T
+#         self.P: float = P
 
-    def __str__(self):
-        return f"r{self.R}s{self.S}t{self.T}p{self.P}"
+#     def __str__(self):
+#         return f"r{self.R}s{self.S}t{self.T}p{self.P}"
 
-    def fitness(self, strategy, k, cost=0):
-        if strategy:
-            return ((k - 1) * self.R + (self.Z - k) * self.S) / (self.Z - 1) - cost
-        else:
-            return (k * self.T + (self.Z - k - 1) * self.P) / (self.Z - 1) - cost
+#     def fitness(self, strategy, k, cost=0):
+#         if strategy:
+#             return ((k - 1) * self.R + (self.Z - k) * self.S) / (self.Z - 1) - cost
+#         else:
+#             return (k * self.T + (self.Z - k - 1) * self.P) / (self.Z - 1) - cost
 
 
-class CRD:
-    def __init__(self, N, M, b, c, r):
-        self.N: int = N
-        self.M: int = M
-        self.b: float = b
-        self.c: float = c
-        self.r: float = r
+# class CRD:
+#     def __init__(self, N, M, b, c, r):
+#         self.N: int = N
+#         self.M: int = M
+#         self.b: float = b
+#         self.c: float = c
+#         self.r: float = r
 
-    def payoff(self, s, k):
-        if s == 0:
-            if 1 <= k < self.M:
-                return self.b * (1 - self.r)
-            else:
-                return self.b
-        else:
-            if 1 <= k < self.M:
-                return self.b * (1 - self.r - self.c)
-            else:
-                return self.b * (1 - self.c)
+#     def payoff(self, s, k):
+#         if s == 0:
+#             if 1 <= k < self.M:
+#                 return self.b * (1 - self.r)
+#             else:
+#                 return self.b
+#         else:
+#             if 1 <= k < self.M:
+#                 return self.b * (1 - self.r - self.c)
+#             else:
+#                 return self.b * (1 - self.c)
