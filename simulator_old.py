@@ -78,7 +78,7 @@ class Simulator:
         Returns:
             float: normalized EFC
         """
-        return sum([self.distribution[k]*k/self.Z for k in range(self.Z + 1)])
+        return sum([self.distribution[k] * k / self.Z for k in range(self.Z + 1)])
 
     def evolution_step(self):
         player_A, player_B = random.sample(self.population, k=2)
@@ -161,7 +161,7 @@ class Simulator:
             self.run_one_generation()
 
         self.distribution = self.distribution / (self.Z * self.gens)
-        
+
         efc = self.calculate_efc()
 
         depth = "".join(

@@ -10,7 +10,7 @@ class Player:
         self.strategy: int = random.choice([0, 1])
         self.actions: list = []
         self.context: list = []
-        self.fitness: float = 0.
+        self.fitness: float = 0.0
 
     def mutate(self):
         self.strategy = 1 - self.strategy

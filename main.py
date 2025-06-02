@@ -31,24 +31,32 @@ def read_arguments():
 def run_simulation(args):
     simulation, parameters = args
     sim = Simulator(simulation, parameters)
-    
-    sim.run()
+
+    sim.run(plot=True)
 
 
 def run_simulations(run_args, sim_args, clear_data=True):
     outdir = f"./outputs/{uuid.uuid1()}"
     os.mkdir(outdir)
     sim_args[0]["outdir"] = outdir
-    
+
     num_cores = mp.cpu_count() - 1 if run_args["cores"] == "all" else run_args["cores"]
 
-    print("============ Running experiment of", run_args["runs"],
-          "simulations in", num_cores, "cores: ============")
+    print(
+        "============ Running experiment of",
+        run_args["runs"],
+        "simulations in",
+        num_cores,
+        "cores: ============",
+    )
 
     print("Pooling processes...")
     with mp.Pool(processes=num_cores) as pool:
         list(
-            tqdm(pool.imap(run_simulation, [sim_args] * run_args["runs"]), total=run_args["runs"])
+            tqdm(
+                pool.imap(run_simulation, [sim_args] * run_args["runs"]),
+                total=run_args["runs"],
+            )
         )
 
     print("Simulations done. Processing results...")
@@ -57,4 +65,3 @@ def run_simulations(run_args, sim_args, clear_data=True):
 if __name__ == "__main__":
     run_args, sim_args = read_arguments()
     run_simulation(sim_args)
-    

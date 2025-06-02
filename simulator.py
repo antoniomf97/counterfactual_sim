@@ -5,17 +5,16 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from player import Player
-from games import NSH
+from games import NSH, NSG, P2
 
 
 class Simulator:
-    games = {"NSH": NSH}
+    games = {"NSH": NSH, "NSG": NSG, "P2": P2}
 
     def __init__(self, simulation, parameters):
         self.population: list[Player] = []
         self.k: int = 0
 
-        self.N = parameters["N"]
         self.Z = simulation["population_size"]
         self.beta: float = simulation["selection_strength"]
         self.mutation: float = simulation["mutation_rate"]
@@ -24,9 +23,13 @@ class Simulator:
 
         self.game_label = simulation["game"]
         self.game = self.games[self.game_label](self.Z, **parameters)
+        self.N = self.game.N
+
         self.gens: int = simulation["generations"]
 
-        self.context = self.set_context(simulation["use_context"], simulation["context"])
+        self.context = self.set_context(
+            simulation["use_context"], simulation["context"]
+        )
 
         self.initialize_population()
         self.distribution = np.zeros(self.Z + 1)
@@ -36,7 +39,7 @@ class Simulator:
 
         for player in self.population:
             self.k += player.strategy
-    
+
     def set_context(self, use_context, context):
         if not use_context:
             return None
@@ -50,7 +53,7 @@ class Simulator:
             return self.gaussian_context
         else:
             raise ValueError("Invalid context provided.")
-    
+
     def default_context(self):
         return self.k
 
@@ -65,7 +68,7 @@ class Simulator:
         return k
 
     def calculate_efc(self):
-        return sum([self.distribution[k]*k/self.Z for k in range(self.Z + 1)])
+        return sum([self.distribution[k] * k / self.Z for k in range(self.Z + 1)])
 
     def imitate(self, player_A, player_B):
         """
@@ -75,28 +78,32 @@ class Simulator:
             player_A (Player): player A
             player_B (Player): player B
         """
-        n_games = round(self.Z/self.N)
+        n_games = round(self.Z / (self.N - 1))
 
         # player A plays n_games
         player_A.fitness = 0
         for _ in range(n_games):
-            n_cooperators = sum([p.strategy for p in random.sample(self.population, k=self.N-1)])
-            n_cooperators += player_A.strategy
+            n_cooperators = sum(
+                [p.strategy for p in random.sample(self.population, k=self.N - 1)]
+            )
             player_A.fitness += self.game.payoff(player_A.strategy, n_cooperators)
 
         # player B plays n_games
         player_B.fitness = 0
         for _ in range(n_games):
-            n_cooperators = sum([p.strategy for p in random.sample(self.population, k=self.N-1)])
-            n_cooperators += player_B.strategy
+            n_cooperators = sum(
+                [p.strategy for p in random.sample(self.population, k=self.N - 1)]
+            )
             player_B.fitness += self.game.payoff(player_B.strategy, n_cooperators)
-        
-        # normalize
-        player_A.fitness /= n_games
-        player_B.fitness /= n_games
+
+        # # normalize
+        # player_A.fitness /= n_games
+        # player_B.fitness /= n_games
 
         # leaning step
-        p_Fermi = 1.0 / (1.0 + np.exp(self.beta * (player_A.fitness - player_B.fitness)))
+        p_Fermi = 1.0 / (
+            1.0 + np.exp(self.beta * (player_A.fitness - player_B.fitness))
+        )
 
         if random.random() < p_Fermi:
             player_A.strategy = player_B.strategy
@@ -136,7 +143,9 @@ class Simulator:
                 if len(past_actions) == 0:
                     self.imitate(player_A, player_B)
                 else:
-                    fitness_now = self.game.fitness(player_A.strategy, perceived_k, self.cost)
+                    fitness_now = self.game.fitness(
+                        player_A.strategy, perceived_k, self.cost
+                    )
                     fitness_past = [
                         self.game.fitness(
                             past_actions[-i], past_context[-i], self.cost * (i + 1)
@@ -154,7 +163,6 @@ class Simulator:
                     if random.random() < p_Fermi:
                         player_A.strategy = past_actions[-index_max]
 
-        # if player_A.strategy != i_strategy:
         self.k += player_A.strategy - i_strategy
         if player_A.strategy != i_strategy:
             player_A.context.append(perceived_k)
@@ -194,5 +202,5 @@ class Simulator:
 
     def plot_stationary_distribution(self):
         plt.plot(self.distribution)
+        plt.xlim(0, self.Z)
         plt.show()
-    
