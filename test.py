@@ -1,0 +1,155 @@
+import random, sys
+from yaml import safe_load
+import numpy as np
+import itertools
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+
+
+class Player:
+    id = itertools.count()
+
+    def __init__(self):
+        self.id: int = next(Player.id)
+        self.strategy: int = random.choice([0, 1])
+
+    def mutate(self):
+        self.strategy = 1 - self.strategy
+
+
+class NSH:
+    """
+    N-Player Stag Hunt Game
+    """
+
+    def __init__(self, Z, N, M, F, c):
+        self.Z: int = Z
+        self.N: int = N
+        self.M: int = M
+        self.F: float = F
+        self.c: float = c
+        self.n_games = round(self.Z / (self.N - 1))
+
+    def payoff(self, strategy, k):
+        # k += strategy
+        group_strategy = 0 if k < self.M else 1
+        payoff_matrix = [
+            [0, k * self.F * self.c / self.N],
+            [-self.c, k * self.F * self.c / self.N - self.c],
+        ]
+
+        return payoff_matrix[strategy][group_strategy]
+
+
+def read_arguments():
+    try:
+        file_name: str = "inputs/" + str(sys.argv[1]) + ".yaml"
+    except:
+        raise ValueError(
+            "No filename provided. Please run as 'python main.py <filename>'"
+        )
+
+    # Open and parse the YAML file
+    with open(file_name, "r") as f:
+        data = safe_load(f)
+
+    try:
+        return data["running"], (data["simulation"], data[data["simulation"]["game"]])
+    except:
+        raise ValueError(f"Game '{data['population']['game']}' not defined.")
+
+
+class Simulator:
+    def __init__(self, simulation, parameters):
+        self.population: list[Player] = []
+        self.k: int = 0
+
+        self.Z = simulation["population_size"]
+        self.game = NSH(self.Z, **parameters)
+        self.beta: float = simulation["selection_strength"]
+        self.mutation: float = simulation["mutation_rate"] / self.game.n_games
+        self.N = self.game.N
+
+        self.gens: int = simulation["generations"]
+
+        self.initialize_population()
+        self.distribution = np.zeros(self.Z + 1)
+
+    def initialize_population(self):
+        self.population = [Player() for _ in range(self.Z)]
+
+        for player in self.population:
+            self.k += player.strategy
+
+    def imitate(self, player_A, player_B):
+        # player A plays n_games
+        player_A.fitness = 0
+        for _ in range(self.game.n_games):
+            n_cooperators = sum(
+                [p.strategy for p in random.sample(self.population, k=round(self.N) - 1)]
+            )
+            player_A.fitness += self.game.payoff(player_A.strategy, n_cooperators)
+
+        # player B plays n_games
+        player_B.fitness = 0
+        for _ in range(self.game.n_games):
+            n_cooperators = sum(
+                [p.strategy for p in random.sample(self.population, k=round(self.N) - 1)]
+            )
+            player_B.fitness += self.game.payoff(player_B.strategy, n_cooperators)
+
+        # normalize
+        player_A.fitness /= self.game.n_games
+        player_B.fitness /= self.game.n_games
+
+        # leaning step
+        p_Fermi = 1.0 / (
+            1.0 + np.exp(self.beta * (player_A.fitness - player_B.fitness))
+        )
+
+        if random.random() < p_Fermi:
+            player_A.strategy = player_B.strategy
+
+    def evolutionary_step(self):
+        player_A, player_B = random.sample(self.population, k=2)
+
+        i_strategy = player_A.strategy
+
+        if random.random() < self.mutation:
+            player_A.mutate()
+        else:
+            self.imitate(player_A, player_B)
+
+        self.k += player_A.strategy - i_strategy
+
+        self.distribution[self.k] += 1
+
+    def run_one_generation(self):
+        for _ in range(self.Z):
+            self.evolutionary_step()
+
+    def run(self):
+        for _ in tqdm(range(self.gens)):
+            self.run_one_generation()
+
+        self.distribution = self.distribution / (self.Z * self.gens)
+
+        print(self.distribution)
+        print(sum(self.distribution))
+        self.plot_stationary_distribution()
+    
+    def plot_stationary_distribution(self):
+        plt.plot(self.distribution)
+        plt.xlim(0, self.Z)
+        plt.show()
+
+
+def run_simulation(args):
+    simulation, parameters = args
+    sim = Simulator(simulation, parameters)
+    sim.run()
+
+
+if __name__ == "__main__":
+    run_args, sim_args = read_arguments()
+    run_simulation(sim_args)
