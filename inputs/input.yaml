@@ -1,12 +1,12 @@
 running:
-  runs: 1
+  runs: 2
   cores: 1
 simulation:
-  generations: 10000
+  generations: 1000
   population_size: 50
-  selection_strength: 5.0
-  mutation_rate: 0.1
-  game: NSH
+  selection_strength: 1.0
+  mutation_rate: 0.01
+  game: P2
   # depth_distribution: [1]
   # use_context: False
   # use_weights: False
@@ -17,9 +17,9 @@ simulation:
   #   sample_size: 10
   #   uncertainty: 25
 NSH:
-  N: 6.
-  M: 3.
-  F: 6.2
+  N: 2.
+  M: 1.
+  F: 4
   c: 1.
 # NSG:
 #   N: 10
@@ -32,9 +32,9 @@ NSH:
 #   b: 1
 #   c: 0.1
 #   r: 0.1
-# P2:
-#   R: 3
-#   S: 2
-#   T: 4
-#   P: 1.7
+P2:
+  R: 3.
+  S: -1.
+  T: 1.
+  P: 0.
 

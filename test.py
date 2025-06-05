@@ -41,6 +41,25 @@ class NSH:
         return payoff_matrix[strategy][group_strategy]
 
 
+class P2:
+    """
+    2-Player Game
+    """
+
+    def __init__(self, Z, R, S, T, P):
+        self.Z: int = Z
+        self.N: int = 2
+        self.R: float = R
+        self.S: float = S
+        self.T: float = T
+        self.P: float = P
+        self.n_games = self.Z
+
+    def payoff(self, A_strategy, B_strategy):
+        payoff_matrix = [[self.P, self.T], [self.S, self.R]]
+        return payoff_matrix[A_strategy][B_strategy]
+
+
 def read_arguments():
     try:
         file_name: str = "inputs/" + str(sys.argv[1]) + ".yaml"
@@ -65,7 +84,7 @@ class Simulator:
         self.k: int = 0
 
         self.Z = simulation["population_size"]
-        self.game = NSH(self.Z, **parameters)
+        self.game = P2(self.Z, **parameters)
         self.beta: float = simulation["selection_strength"]
         self.mutation: float = simulation["mutation_rate"] / self.game.n_games
         self.N = self.game.N
@@ -80,6 +99,10 @@ class Simulator:
 
         for player in self.population:
             self.k += player.strategy
+
+    def reset(self):
+        self.initialize_population()
+        self.distribution = np.zeros(self.Z + 1)
 
     def imitate(self, player_A, player_B):
         # player A plays n_games
@@ -134,22 +157,31 @@ class Simulator:
 
         self.distribution = self.distribution / (self.Z * self.gens)
 
-        print(self.distribution)
-        print(sum(self.distribution))
-        self.plot_stationary_distribution()
+        return self.distribution
+
+    def run_n_times(self, runs):
+        dist = np.zeros(self.Z + 1)
+        for i in range(runs):
+            self.reset()
+            dist += self.run()
+        
+        dist /= runs
+
+        self.plot_stationary_distribution(dist)
+
     
-    def plot_stationary_distribution(self):
-        plt.plot(self.distribution)
+    def plot_stationary_distribution(self, dist):
+        plt.plot(dist)
         plt.xlim(0, self.Z)
         plt.show()
 
 
-def run_simulation(args):
-    simulation, parameters = args
+def run_simulation(run_args, sim_args):
+    simulation, parameters = sim_args
     sim = Simulator(simulation, parameters)
-    sim.run()
+    sim.run_n_times(runs=run_args["runs"])
 
 
 if __name__ == "__main__":
     run_args, sim_args = read_arguments()
-    run_simulation(sim_args)
+    run_simulation(run_args, sim_args)
