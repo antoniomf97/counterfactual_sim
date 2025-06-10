@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 class Player:
     id = itertools.count()
 
-    def __init__(self):
+    def __init__(self, strategy = None):
         self.id: int = next(Player.id)
-        self.strategy: int = random.choice([0, 1])
+        self.strategy: int = strategy if strategy is not None else random.choice([0, 1])
 
     def mutate(self):
         self.strategy = 1 - self.strategy
@@ -31,7 +31,7 @@ class NSH:
         self.n_games = round(self.Z / (self.N - 1))
 
     def payoff(self, strategy, k):
-        # k += strategy
+        k += strategy
         group_strategy = 0 if k < self.M else 1
         payoff_matrix = [
             [0, k * self.F * self.c / self.N],
@@ -94,14 +94,21 @@ class Simulator:
         self.initialize_population()
         self.distribution = np.zeros(self.Z + 1)
 
-    def initialize_population(self):
-        self.population = [Player() for _ in range(self.Z)]
+    def initialize_population(self, init_k=None):
+        if init_k is not None:
+            strats = np.zeros(self.Z, dtype=int)
+            indices = np.random.choice(self.Z, init_k, replace=False)
+            strats[indices] = 1
+            self.population = [Player(strategy=strats[i]) for i in range(self.Z)]
+        else:
+            self.population = [Player() for _ in range(self.Z)]
 
+        self.k = 0
         for player in self.population:
             self.k += player.strategy
 
-    def reset(self):
-        self.initialize_population()
+    def reset(self, init_k=None):
+        self.initialize_population(init_k)
         self.distribution = np.zeros(self.Z + 1)
 
     def imitate(self, player_A, player_B):
@@ -161,20 +168,20 @@ class Simulator:
 
     def run_n_times(self, runs):
         dist = np.zeros(self.Z + 1)
+        k_values = np.linspace(0, self.Z, runs, dtype=int)
+        print(k_values)
         for i in range(runs):
-            self.reset()
+            self.reset(init_k=k_values[i])
             dist += self.run()
         
         dist /= runs
 
         self.plot_stationary_distribution(dist)
 
-    
     def plot_stationary_distribution(self, dist):
         plt.plot(dist)
         plt.xlim(0, self.Z)
         plt.show()
-
 
 def run_simulation(run_args, sim_args):
     simulation, parameters = sim_args
