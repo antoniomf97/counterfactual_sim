@@ -84,9 +84,9 @@ class Simulator:
         self.k: int = 0
 
         self.Z = simulation["population_size"]
-        self.game = P2(self.Z, **parameters)
+        self.game = NSH(self.Z, **parameters)
         self.beta: float = simulation["selection_strength"]
-        self.mutation: float = simulation["mutation_rate"] / self.game.n_games
+        self.mutation: float = simulation["mutation_rate"] 
         self.N = self.game.N
 
         self.gens: int = simulation["generations"]

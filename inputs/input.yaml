@@ -6,7 +6,7 @@ simulation:
   population_size: 100
   selection_strength: 1.0
   mutation_rate: 0.01
-  game: P2
+  game: NSH
   # depth_distribution: [1]
   # use_context: False
   # use_weights: False
@@ -19,7 +19,7 @@ simulation:
 NSH:
   N: 6.
   M: 3.
-  F: 6.5
+  F: 5.8
   c: 1.
 # NSG:
 #   N: 10
