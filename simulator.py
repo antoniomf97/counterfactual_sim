@@ -120,7 +120,7 @@ class Simulator:
         else:
             depth = np.random.choice(
                 np.arange(0, len(self.depth_dist)), p=self.depth_dist
-            )
+            ) * 2
             if depth == 0:
                 self.imitate(player_A, player_B)
             else:
