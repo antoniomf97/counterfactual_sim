@@ -9,6 +9,7 @@ import pickle
 import multiprocessing as mp
 from copy import copy
 from scipy.special import binom
+from math import floor
 
 
 class Player:
@@ -17,17 +18,15 @@ class Player:
     def __init__(self, strategy=None):
         self.id: int = next(Player.id)
         self.strategy: int = strategy if strategy is not None else random.choice([0, 1])
-        self.actions: list = []
         self.context: list = []
+        self.actions: list = []
 
     def mutate(self):
         self.strategy = 1 - self.strategy
 
-    def get_past_actions(self, depth: int):
-        return self.actions[-depth:]
-
     def get_past_context(self, depth: int):
-        return self.context[-depth:]
+        min_len = min([floor(len(self.context)/2), depth]) + 1
+        return [self.context[-2*i] for i in range(1, min_len)]
 
 
 class NSH:
@@ -61,7 +60,7 @@ class NSH:
                     binom(k - 1, i)
                     * binom(self.Z - k, self.N - i - 1)
                     * self.payoff(strategy, i + 1)
-                    for i in range(self.N)
+                    for i in range(round(self.N))
                 ]
             )
         else:
@@ -70,7 +69,7 @@ class NSH:
                     binom(k, i)
                     * binom(self.Z - k - 1, self.N - i - 1)
                     * self.payoff(strategy, i)
-                    for i in range(self.N)
+                    for i in range(round(self.N))
                 ]
             )
         return fitness * s - cost
@@ -156,15 +155,15 @@ class Simulator:
 
     def set_perception(self, perception):
         if perception["label"] == "default":
-            return self.default_context
+            return self.default_perception
         elif perception["label"] == "sample":
             self.sample_size = perception["sample_size"]
-            return self.sampling_context
+            return self.sampling_perception
         elif perception["label"] == "gaussian":
             self.sigma = perception["uncertainty"]
-            return self.gaussian_context
+            return self.gaussian_perception
         else:
-            raise ValueError("Invalid context provided.")
+            raise ValueError("Invalid perception was provided.")
 
     def default_perception(self):
         return self.k
@@ -177,6 +176,9 @@ class Simulator:
 
     def gaussian_perception(self):
         return round(np.random.normal(self.k, self.sigma, 1)[0])
+
+    def calculate_efc(self):
+        return sum([self.distribution[k] * k / self.Z for k in range(self.Z + 1)])
 
     def imitate(self, player_A, player_B):
         # player A plays n_games
@@ -225,47 +227,50 @@ class Simulator:
         else:
             depth = np.random.choice(
                 np.arange(0, len(self.depth_dist)), p=self.depth_dist
-            ) * 2
+            ) 
+
             if depth == 0:
                 self.imitate(player_A, player_B)
-            elif not self.use_context:
-                past_action = 1 - player_A.strategy
-                fitness_past = self.game.fitness(past_action, self.k)
-                fitness_now = self.game.fitness(player_A.strategy, self.k)
+            elif len(player_A.context) >= 2:
+                if not self.use_context:
+                    past_action = 1 - player_A.strategy
+                    fitness_now = self.game.fitness(player_A.strategy, perceived_k)
+                    fitness_past = self.game.fitness(past_action, perceived_k)        
 
-                p_Fermi = 1.0 / (
-                    1 + np.exp(self.beta * (fitness_now - fitness_past[index_max]))
-                )
-                if random.random() < p_Fermi:
-                    player_A.strategy = past_action
-            else:
-                past_action = 1 - player_A.strategy
-                # 1. only compare with strategies that are different
-                actions_idx = [-i * 2 for i in range(1, depth)]
-
-                past_context = player_A.get_past_context(depth)
-                past_context = [past_context[i] for i in actions_idx]             
-
-                # 2. compute past actions fitnesses
-                fitness_now = self.game.fitness(
-                    player_A.strategy, perceived_k, self.cost
-                )
-                fitness_past = [
-                    self.game.fitness(
-                        past_actions[-i], past_context[-i], self.cost * (i + 1)
+                    # learning step
+                    p_Fermi = 1.0 / (
+                        1 + np.exp(self.beta * (fitness_now - fitness_past))
                     )
-                    for i in range(0, len(other_strat_idx))
-                ]
+                    if random.random() < p_Fermi:
+                        player_A.strategy = past_action
+                else:
+                    past_action = 1 - player_A.strategy
+                    # 1. get context on which past actions were taken
+                    past_context = player_A.get_past_context(depth)
 
-                # 3. compare the differences between the contexts and weight all fitnesses
+                    # 2. compute past actions fitnesses
+                    fitness_now = self.game.fitness(player_A.strategy, perceived_k)
+                    fitness_past = [
+                        self.game.fitness(past_action, context)
+                        for context in past_context
+                    ]
 
-                # 4. chose max value of past fitness
-                index_max = np.argmax(fitness_past)
-                p_Fermi = 1.0 / (
-                    1 + np.exp(self.beta * (fitness_now - fitness_past[index_max]))
-                )
-                if random.random() < p_Fermi:
-                    player_A.strategy = past_action
+                    print(f"depth: {depth}")
+                    print(f"A strat: {player_A.strategy}")
+                    print(f"Counter strat: {past_action}")
+                    print(f"Past context: {past_context}")
+
+                    # 3. compare the differences between the contexts and weight all fitnesses
+
+                    # 4. chose max value of past fitness
+                    max_past_fitness = np.max(fitness_past)
+
+                    # 5. learning step
+                    p_Fermi = 1.0 / (
+                        1 + np.exp(self.beta * (fitness_now - max_past_fitness))
+                    )
+                    if random.random() < p_Fermi:
+                        player_A.strategy = past_action
 
         self.k += player_A.strategy - i_strategy
         if player_A.strategy != i_strategy:
@@ -375,4 +380,6 @@ def run_simulations(run_args, sim_args, save_fig=False):
 
 if __name__ == "__main__":
     run_args, sim_args = read_arguments()
-    run_simulations(run_args, sim_args,save_fig=True)
+    # run_simulations(run_args, sim_args,save_fig=False)
+    path, size, configurations = prepare_configurations(1, sim_args)
+    run_simulation(configurations[0])

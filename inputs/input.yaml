@@ -1,14 +1,14 @@
 running:
-  runs: 40
-  cores: 20
+  runs: 1
+  cores: 1
 simulation:
-  generations: 10000
+  generations: 1000
   population_size: 100
   selection_strength: 1.0
   mutation_rate: 0.01
   game: NSH
-  depth_distribution: [0.9, 0, 0.1]
-  use_context: False
+  depth_distribution: [0.9, 0.1]
+  use_context: True
   perception:
     label: default
     sample_size: 10
