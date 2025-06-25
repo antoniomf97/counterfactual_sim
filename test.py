@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import uuid, os
 import pickle
 import multiprocessing as mp
-from copy import copy
+from copy import deepcopy
 from scipy.special import binom
 from math import floor
 
@@ -227,10 +227,11 @@ class Simulator:
         else:
             depth = np.random.choice(
                 np.arange(0, len(self.depth_dist)), p=self.depth_dist
-            ) 
+            )
 
             if depth == 0:
                 self.imitate(player_A, player_B)
+                
             elif len(player_A.context) >= 2:
                 if not self.use_context:
                     past_action = 1 - player_A.strategy
@@ -255,10 +256,11 @@ class Simulator:
                         for context in past_context
                     ]
 
-                    print(f"depth: {depth}")
-                    print(f"A strat: {player_A.strategy}")
-                    print(f"Counter strat: {past_action}")
-                    print(f"Past context: {past_context}")
+                    # print(f"depth: {depth}")
+                    # print(f"A strat: {player_A.strategy}")
+                    # print(f"Counter strat: {past_action}")
+                    # print(f"Past context: {past_context}")
+                    # print(f"Current: {perceived_k}")
 
                     # 3. compare the differences between the contexts and weight all fitnesses
 
@@ -294,16 +296,17 @@ class Simulator:
     def write_outputs(self):
         filename = self.output + f"/{uuid.uuid1()}.pickle"
         with open(filename, 'wb') as handle:
-            pickle.dump(self.distribution, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.distribution + [self.calculate_efc()], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def plot_stationary_distribution(Z, dist, path, save_fig):
+def plot_stationary_distribution(Z, dist, path, save_fig, plot_show):
     plt.plot(dist)
     plt.xlim(0, Z)
     if save_fig:
         print("Figure saved.")
         plt.savefig(f"{path}.png")
-    plt.show()
+    if plot_show:
+        plt.show()
 
 
 def prepare_configurations(runs, sim_args):
@@ -318,12 +321,12 @@ def prepare_configurations(runs, sim_args):
     configurations = []
     for i in range(runs):
         simulation["init_k"] = k_values[i]
-        configurations.append((copy(simulation), parameters))
+        configurations.append((deepcopy(simulation), parameters))
 
     return path, size, configurations
 
 
-def collapse_results(path, size, runs, save_fig):
+def collapse_results(path, size, runs, save_data, save_fig, plot_show):
     dist = np.zeros(size+1)
 
     for file in os.listdir(path):
@@ -335,17 +338,20 @@ def collapse_results(path, size, runs, save_fig):
 
     dist /= runs
 
-    new_file = f"{path}.pickle" 
-    with open(new_file, 'wb') as handle:
-        pickle.dump(dist, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if save_data:
+        new_file = f"{path}.pickle" 
+        with open(new_file, 'wb') as handle:
+            pickle.dump(dist, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print(f"Saved cleaned data to {new_file}")
 
     for file in os.listdir(path):
         os.remove(os.path.join(path, file))
     os.rmdir(path)
-    
-    print(f"Saved cleaned data to {new_file}")
 
-    plot_stationary_distribution(size, dist, path, save_fig)
+    if plot_show or save_fig:
+        plot_stationary_distribution(size, dist[:-1], path, save_fig, plot_show)
+    
+    return dist[-1]
 
 
 def run_simulation(args):
@@ -355,14 +361,14 @@ def run_simulation(args):
     sim.run()
 
 
-def run_simulations(run_args, sim_args, save_fig=False):
+def run_simulations(run_args, sim_args, save_data=False, save_fig=False, plot_show=False):
     runs, cores = run_args["runs"], run_args["cores"]
 
     path, size, configurations = prepare_configurations(runs, sim_args)
 
     num_cores = mp.cpu_count() - 1 if cores == "all" else cores
 
-    print("=" * 10 + f" Running {runs} simulations in {cores} cores " + "=" * 10)
+    print("=" * 10 + f" Running {runs} simulations in {num_cores} cores " + "=" * 10)
 
     print("Pooling processes...")
     with mp.Pool(processes=num_cores) as pool:
@@ -375,11 +381,38 @@ def run_simulations(run_args, sim_args, save_fig=False):
 
     print("Simulations done. Processing results...")
 
-    collapse_results(path, size, runs, save_fig)
+    return collapse_results(path, size, runs, save_data, save_fig, plot_show)
+
+
+def e1_depth():
+    run_args, sim_args = read_arguments()
+    depths = [[1.],[0.9,0.1],[0.9,0,0.1],[0.9,0,0,0.1],[0.9,0,0,0,0.1],[0.9,0,0,0,0,0.1],
+              [0.9,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0,0.1]]
+
+    sim_args_all = []
+
+    for depth in depths:
+        sim_args[0]["depth_distribution"] = depth
+        sim_args_all.append(deepcopy(sim_args))
+ 
+    efcs = []
+    for i, args in enumerate(sim_args_all):
+        print("=" * 8 + f" Simulations with depth={args[0]["depth_distribution"]} ")
+        efcs.append(run_simulations(run_args, args))
+
+    print(len(efcs))
+
+    with open(f"./outputs/e1_depth_{len(depths)}.pickle", 'wb') as handle:
+        pickle.dump(efcs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    plt.imshow([efcs], vmin=0, vmax=1)
+    plt.colorbar()
+    plt.show()
 
 
 if __name__ == "__main__":
-    run_args, sim_args = read_arguments()
-    # run_simulations(run_args, sim_args,save_fig=False)
-    path, size, configurations = prepare_configurations(1, sim_args)
-    run_simulation(configurations[0])
+    e1_depth()
+    # d = [np.float64(0.58711344), np.float64(0.7388951199999999), np.float64(0.7344240000000001), np.float64(0.72374896), np.float64(0.72736248), np.float64(0.7062622000000001), np.float64(0.70433112), np.float64(0.71177976), np.float64(0.69541004), np.float64(0.6036053600000001), np.float64(0.6271069199999999)]
+    # plt.imshow([d], vmin=0, vmax=1, extent=(0,10,-2,2))
+    # plt.colorbar()
+    # plt.show()

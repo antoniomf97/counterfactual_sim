@@ -1,18 +1,18 @@
 running:
-  runs: 1
-  cores: 1
+  runs: 10
+  cores: 10
 simulation:
-  generations: 1000
-  population_size: 100
+  generations: 5000
+  population_size: 50
   selection_strength: 1.0
   mutation_rate: 0.01
   game: NSH
   depth_distribution: [0.9, 0.1]
   use_context: True
   perception:
-    label: default
+    label: gaussian
     sample_size: 10
-    uncertainty: 25
+    uncertainty: 10
   # use_weights: False
   # cost_type: "fix"
   # cost: 0.
@@ -21,17 +21,6 @@ NSH:
   M: 3.
   F: 5.5
   c: 1.
-# NSG:
-#   N: 10
-#   M: 6
-#   b: 1.
-#   c: 0.2
-# CRD:
-#   N: 10
-#   M: 5
-#   b: 1
-#   c: 0.1
-#   r: 0.1
 P2:
   R: 4
   S: 1
