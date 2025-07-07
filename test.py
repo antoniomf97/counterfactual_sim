@@ -256,13 +256,9 @@ class Simulator:
                         for context in past_context
                     ]
 
-                    # print(f"depth: {depth}")
-                    # print(f"A strat: {player_A.strategy}")
-                    # print(f"Counter strat: {past_action}")
-                    # print(f"Past context: {past_context}")
-                    # print(f"Current: {perceived_k}")
-
                     # 3. compare the differences between the contexts and weight all fitnesses
+                    
+
 
                     # 4. chose max value of past fitness
                     max_past_fitness = np.max(fitness_past)
@@ -386,33 +382,42 @@ def run_simulations(run_args, sim_args, save_data=False, save_fig=False, plot_sh
 
 def e1_depth():
     run_args, sim_args = read_arguments()
-    depths = [[1.],[0.9,0.1],[0.9,0,0.1],[0.9,0,0,0.1],[0.9,0,0,0,0.1],[0.9,0,0,0,0,0.1],
-              [0.9,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0,0.1]]
+    depths = [[1.],[0.9,0.1],[0.9,0,0.1],[0.9,0,0,0.1],
+              [0.9,0,0,0,0.1],[0.9,0,0,0,0,0.1],[0.9,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0.1],
+              [0.9,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0,0.1]]
+    labels = ['default', 'sample', 'gaussian']
 
     sim_args_all = []
 
-    for depth in depths:
-        sim_args[0]["depth_distribution"] = depth
-        sim_args_all.append(deepcopy(sim_args))
+    for label in labels:
+        aux = []
+        for depth in depths:
+            sim_args[0]["depth_distribution"] = depth
+            sim_args[0]["perception"]["label"] = label
+            aux.append(deepcopy(sim_args))
+        sim_args_all.append(aux)
  
     efcs = []
-    for i, args in enumerate(sim_args_all):
-        print("=" * 8 + f" Simulations with depth={args[0]["depth_distribution"]} ")
-        efcs.append(run_simulations(run_args, args))
+    for i, label in enumerate(labels):
+        aux = []
+        for j, depth in enumerate(depths):
+            print("=" * 8 + f" Simulations with label={label} depth={depth} ")
+            aux.append(run_simulations(run_args, sim_args_all[i][j]))
+        efcs.append(aux)
 
-    print(len(efcs))
+    print(efcs)
 
-    with open(f"./outputs/e1_depth_{len(depths)}.pickle", 'wb') as handle:
+    with open(f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}.pickle", 'wb') as handle:
         pickle.dump(efcs, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    plt.imshow([efcs], vmin=0, vmax=1)
+    fig, ax = plt.subplots(1,1)
+    plt.imshow(efcs, vmin=0, vmax=1)
     plt.colorbar()
+    ax.set_xticks(ticks=range(len(depths)))
+    ax.set_yticks(ticks=[0,1,2])
+    ax.set_yticklabels(labels=['default', 'sample', 'gaussian'])
     plt.show()
 
 
 if __name__ == "__main__":
     e1_depth()
-    # d = [np.float64(0.58711344), np.float64(0.7388951199999999), np.float64(0.7344240000000001), np.float64(0.72374896), np.float64(0.72736248), np.float64(0.7062622000000001), np.float64(0.70433112), np.float64(0.71177976), np.float64(0.69541004), np.float64(0.6036053600000001), np.float64(0.6271069199999999)]
-    # plt.imshow([d], vmin=0, vmax=1, extent=(0,10,-2,2))
-    # plt.colorbar()
-    # plt.show()
