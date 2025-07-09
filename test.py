@@ -380,12 +380,16 @@ def run_simulations(run_args, sim_args, save_data=False, save_fig=False, plot_sh
     return collapse_results(path, size, runs, save_data, save_fig, plot_show)
 
 
-def e1_depth():
+def e1_depth(maxdepth = 50):
     run_args, sim_args = read_arguments()
-    depths = [[1.],[0.9,0.1],[0.9,0,0.1],[0.9,0,0,0.1],
-              [0.9,0,0,0,0.1],[0.9,0,0,0,0,0.1],[0.9,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0.1],
-              [0.9,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0.1],[0.9,0,0,0,0,0,0,0,0,0,0.1]]
-    labels = ['default', 'sample', 'gaussian']
+    depths = [[1.]]
+    for n in range(1, maxdepth + 1):
+        depth = np.zeros(n + 1)
+        depth[0] = 0.9
+        depth[-1] = 0.1
+        depths.append(depth)
+    
+    labels = ['default']# , 'sample', 'gaussian']
 
     sim_args_all = []
 
@@ -407,7 +411,9 @@ def e1_depth():
 
     print(efcs)
 
-    with open(f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}.pickle", 'wb') as handle:
+    r = run_args["runs"]
+    g = sim_args[0]["generations"]
+    with open(f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}_{r}_{g}.pickle", 'wb') as handle:
         pickle.dump(efcs, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     fig, ax = plt.subplots(1,1)
@@ -419,5 +425,22 @@ def e1_depth():
     plt.show()
 
 
+
+
+
 if __name__ == "__main__":
-    e1_depth()
+    # e1_depth()
+    
+    with open("./outputs/e1_depth/e1_depth_1_51_25_1000.pickle", "rb") as input_file:
+        data = pickle.load(file=input_file)
+
+    x = np.array([i for i in range(1, 51)])
+    y = np.array(data[0][1:])
+    a = np.polyfit(-np.log(x), y, 1)
+
+    plt.plot(data[0], "o-")
+    plt.plot(-a[0]*np.log(x) + a[1])
+    plt.xlabel("Depth")
+    plt.ylabel("Average cooperation")
+    plt.grid(True)
+    plt.show()
