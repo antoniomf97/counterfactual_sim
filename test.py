@@ -9,6 +9,7 @@ import pickle
 import multiprocessing as mp
 from copy import deepcopy
 from scipy.special import binom
+from scipy.stats import norm
 from math import floor
 
 
@@ -92,6 +93,12 @@ class P2:
     def payoff(self, A_strategy, B_strategy):
         payoff_matrix = [[self.P, self.T], [self.S, self.R]]
         return payoff_matrix[A_strategy][B_strategy]
+    
+    def fitness(self, strategy, k):
+        if strategy:
+            return ((k - 1) * self.R + (self.Z - k) * self.S) / (self.Z - 1)
+        else:
+            return (k * self.T + (self.Z - k - 1) * self.P) / (self.Z - 1)
 
 
 def read_arguments():
@@ -324,13 +331,15 @@ def prepare_configurations(runs, sim_args):
 
 def collapse_results(path, size, runs, save_data, save_fig, plot_show):
     dist = np.zeros(size+1)
-
+    efcs = []
     for file in os.listdir(path):
         if not file.endswith(".pickle"):
             continue
          
         with open(f"{path}/{file}", 'rb') as handle:
-            dist += pickle.load(handle)
+            data = pickle.load(handle)
+            dist += data
+            efcs.append(data[-1])
 
     dist /= runs
 
@@ -347,7 +356,7 @@ def collapse_results(path, size, runs, save_data, save_fig, plot_show):
     if plot_show or save_fig:
         plot_stationary_distribution(size, dist[:-1], path, save_fig, plot_show)
     
-    return dist[-1]
+    return dist[-1], efcs
 
 
 def run_simulation(args):
@@ -380,7 +389,7 @@ def run_simulations(run_args, sim_args, save_data=False, save_fig=False, plot_sh
     return collapse_results(path, size, runs, save_data, save_fig, plot_show)
 
 
-def e1_depth(maxdepth = 50):
+def e1_depth(maxdepth = 5):
     run_args, sim_args = read_arguments()
     depths = [[1.]]
     for n in range(1, maxdepth + 1):
@@ -401,46 +410,74 @@ def e1_depth(maxdepth = 50):
             aux.append(deepcopy(sim_args))
         sim_args_all.append(aux)
  
-    efcs = []
+    efcs_avg = []
+    efcs_all = []
     for i, label in enumerate(labels):
-        aux = []
+        aux_avg = []
+        aux_all = []
         for j, depth in enumerate(depths):
-            print("=" * 8 + f" Simulations with label={label} depth={depth} ")
-            aux.append(run_simulations(run_args, sim_args_all[i][j]))
-        efcs.append(aux)
-
-    print(efcs)
+            print("=" * 8 + f" Simulations with label={label} depth={j} ")
+            efc, efc_all = run_simulations(run_args, sim_args_all[i][j])
+            aux_avg.append(efc)
+            aux_all.append(efc_all)
+        efcs_avg.append(aux_avg)
+        efcs_all.append(aux_all)
 
     r = run_args["runs"]
     g = sim_args[0]["generations"]
-    with open(f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}_{r}_{g}.pickle", 'wb') as handle:
-        pickle.dump(efcs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    file = f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}_{r}_{g}.pickle"
+    with open(file, 'wb') as handle:
+        pickle.dump(efcs_all, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print(f"Saved cleaned data to {file}")
 
+    return efcs_all
+
+    # fig, ax = plt.subplots(1,1)
+    # plt.imshow(efcs_avg, vmin=0, vmax=1)
+    # plt.colorbar()
+    # ax.set_xticks(ticks=range(len(depths)))
+    # ax.set_yticks(ticks=[0,1,2])
+    # ax.set_yticklabels(labels=['default', 'sample', 'gaussian'])
+
+
+def plot_e1_fill_between(data):
+    mus = np.array([])
+    stds = np.array([])
+    for i in range(len(data)):
+        for j in range(len(data[0])):
+            mu, std = norm.fit(data[i][j])
+            mus = np.append(mus, mu)
+            stds = np.append(stds, std)
+
+    x = np.array([i for i in range(0, len(data[0]))])
     fig, ax = plt.subplots(1,1)
-    plt.imshow(efcs, vmin=0, vmax=1)
-    plt.colorbar()
-    ax.set_xticks(ticks=range(len(depths)))
-    ax.set_yticks(ticks=[0,1,2])
-    ax.set_yticklabels(labels=['default', 'sample', 'gaussian'])
+    plt.plot(mus, "o-", color="blue")
+    plt.fill_between(x, mus-stds, mus+stds, alpha=0.1, color="blue")
+    plt.fill_between(x, mus-2*stds, mus+2*stds, alpha=0.1, color="blue")
+    plt.ylim(0, 1)
+    plt.grid()
+    plt.ylabel("Expected Fraction of Cooperation")
+    plt.xlabel("Reasoning Depth")
     plt.show()
-
-
-
-
 
 if __name__ == "__main__":
-    # e1_depth()
+    data = e1_depth(maxdepth=50)
+
+    # with open("./outputs/e1_depth/e1_depth_1_11_10_100.pickle", "rb") as input_file:
+    #     data = pickle.load(file=input_file)
+
+    plot_e1_fill_between(data)
     
-    with open("./outputs/e1_depth/e1_depth_1_51_25_1000.pickle", "rb") as input_file:
-        data = pickle.load(file=input_file)
+    # with open("./outputs/e1_depth/e1_depth_1_51_25_1000.pickle", "rb") as input_file:
+    #     data = pickle.load(file=input_file)
 
-    x = np.array([i for i in range(1, 51)])
-    y = np.array(data[0][1:])
-    a = np.polyfit(-np.log(x), y, 1)
+    # x = np.array([i for i in range(1, 51)])
+    # y = np.array(data[0][1:])
+    # a = np.polyfit(-np.log(x), y, 1)
 
-    plt.plot(data[0], "o-")
-    plt.plot(-a[0]*np.log(x) + a[1])
-    plt.xlabel("Depth")
-    plt.ylabel("Average cooperation")
-    plt.grid(True)
-    plt.show()
+    # plt.plot(data[0], "o-")
+    # plt.plot(-a[0]*np.log(x) + a[1])
+    # plt.xlabel("Depth")
+    # plt.ylabel("Average cooperation")
+    # plt.grid(True)
+    # plt.show()
