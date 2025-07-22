@@ -430,7 +430,7 @@ def e1_depth(maxdepth = 5, enhancement = (5,7)):
         pickle.dump(efcs_all, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print(f"Saved cleaned data to {file}")
 
-    return efcs_all
+    return efcs_all, enhancements
 
 
 def plot_e1_fill_between(data):
@@ -454,7 +454,7 @@ def plot_e1_fill_between(data):
     plt.show()
 
 
-def plot_heatmap(data):
+def plot_heatmap(data, enhancements):
     muss = []
     for i in range(len(data)):
         mus = []
@@ -462,15 +462,18 @@ def plot_heatmap(data):
             mus.append(np.mean(data[i][j]))
         muss.append(mus)
     
-    print(muss)
     plt.imshow(muss)
+    plt.colorbar()
+    plt.yticks(range(len(data)), enhancements[::-1])
+    plt.xlabel("Depth")
+    plt.ylabel("Enhancement Factor")
     plt.show()
 
 
 if __name__ == "__main__":
-    data = e1_depth(maxdepth=5)
+    data, enhancements = e1_depth(maxdepth=5)
 
-    plot_heatmap(data)
+    plot_heatmap(data, enhancements)
 
     # with open("./outputs/e1_depth/e1_depth_1_11_10_100.pickle", "rb") as input_file:
     #     data = pickle.load(file=input_file)

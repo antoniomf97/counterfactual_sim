@@ -1,6 +1,6 @@
 running:
-  runs: 2
-  cores: 2
+  runs: 10
+  cores: 10
 simulation:
   generations: 100
   population_size: 50
