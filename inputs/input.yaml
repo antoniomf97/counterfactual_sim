@@ -1,12 +1,12 @@
 running:
-  runs: 50
-  cores: 10
+  runs: 2
+  cores: 2
 simulation:
-  generations: 10000
+  generations: 100
   population_size: 50
   selection_strength: 1.0
   mutation_rate: 0.01
-  game: P2
+  game: NSH
   depth_distribution: [1.]
   use_context: True
   perception:

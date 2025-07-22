@@ -389,7 +389,7 @@ def run_simulations(run_args, sim_args, save_data=False, save_fig=False, plot_sh
     return collapse_results(path, size, runs, save_data, save_fig, plot_show)
 
 
-def e1_depth(maxdepth = 5):
+def e1_depth(maxdepth = 5, enhancement = (5,7)):
     run_args, sim_args = read_arguments()
     depths = [[1.]]
     for n in range(1, maxdepth + 1):
@@ -398,25 +398,25 @@ def e1_depth(maxdepth = 5):
         depth[-1] = 0.1
         depths.append(depth)
     
-    labels = ['default']# , 'sample', 'gaussian']
+    enhancements = np.linspace(enhancement[0], enhancement[1], maxdepth + 1)
 
     sim_args_all = []
 
-    for label in labels:
+    for f in enhancements:
         aux = []
         for depth in depths:
             sim_args[0]["depth_distribution"] = depth
-            sim_args[0]["perception"]["label"] = label
+            sim_args[1]["F"] = f
             aux.append(deepcopy(sim_args))
         sim_args_all.append(aux)
  
     efcs_avg = []
     efcs_all = []
-    for i, label in enumerate(labels):
+    for i, f in enumerate(enhancements):
         aux_avg = []
         aux_all = []
         for j, depth in enumerate(depths):
-            print("=" * 8 + f" Simulations with label={label} depth={j} ")
+            print("=" * 8 + f" Simulations with enhancement={f} depth={j} ")
             efc, efc_all = run_simulations(run_args, sim_args_all[i][j])
             aux_avg.append(efc)
             aux_all.append(efc_all)
@@ -425,19 +425,12 @@ def e1_depth(maxdepth = 5):
 
     r = run_args["runs"]
     g = sim_args[0]["generations"]
-    file = f"./outputs/e1_depth/e1_depth_{len(labels)}_{len(depths)}_{r}_{g}.pickle"
+    file = f"./outputs/e1_depth/e1_depth_{len(enhancements)}_{len(depths)}_{r}_{g}.pickle"
     with open(file, 'wb') as handle:
         pickle.dump(efcs_all, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print(f"Saved cleaned data to {file}")
 
     return efcs_all
-
-    # fig, ax = plt.subplots(1,1)
-    # plt.imshow(efcs_avg, vmin=0, vmax=1)
-    # plt.colorbar()
-    # ax.set_xticks(ticks=range(len(depths)))
-    # ax.set_yticks(ticks=[0,1,2])
-    # ax.set_yticklabels(labels=['default', 'sample', 'gaussian'])
 
 
 def plot_e1_fill_between(data):
@@ -460,13 +453,29 @@ def plot_e1_fill_between(data):
     plt.xlabel("Reasoning Depth")
     plt.show()
 
+
+def plot_heatmap(data):
+    muss = []
+    for i in range(len(data)):
+        mus = []
+        for j in range(len(data[0])):
+            mus.append(np.mean(data[i][j]))
+        muss.append(mus)
+    
+    print(muss)
+    plt.imshow(muss)
+    plt.show()
+
+
 if __name__ == "__main__":
-    data = e1_depth(maxdepth=50)
+    data = e1_depth(maxdepth=5)
+
+    plot_heatmap(data)
 
     # with open("./outputs/e1_depth/e1_depth_1_11_10_100.pickle", "rb") as input_file:
     #     data = pickle.load(file=input_file)
 
-    plot_e1_fill_between(data)
+    # plot_e1_fill_between(data)
     
     # with open("./outputs/e1_depth/e1_depth_1_51_25_1000.pickle", "rb") as input_file:
     #     data = pickle.load(file=input_file)
