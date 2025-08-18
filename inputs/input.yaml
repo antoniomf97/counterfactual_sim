@@ -2,6 +2,7 @@ running:
   runs: 10
   cores: 10
 simulation:
+  type: stat_dist
   generations: 100
   population_size: 50
   selection_strength: 1.0
@@ -16,6 +17,20 @@ simulation:
   # use_weights: False
   # cost_type: "fix"
   # cost: 0.
+stat_dist:
+  depths: [1,5]
+  prob_imitation: 0.9
+  save_data: False
+  save_fig: False
+heatmap:
+  vars: ["q", "cm"]
+  v1_start: 0.5
+  v1_end: 1
+  v1_steps: 21
+  v2_start: -5
+  v2_end: 1
+  v2_steps: 21
+  save_fig: False
 NSH:
   N: 6.
   M: 3.

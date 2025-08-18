@@ -1,25 +1,20 @@
 import random
 import itertools
+from math import floor
 
 
 class Player:
     id = itertools.count()
 
-    def __init__(self):
+    def __init__(self, strategy=None):
         self.id: int = next(Player.id)
-        self.strategy: int = random.choice([0, 1])
-        self.actions: list = []
+        self.strategy: int = strategy if strategy is not None else random.choice([0, 1])
         self.context: list = []
-        self.fitness: float = 0.0
+        self.actions: list = []
 
     def mutate(self):
         self.strategy = 1 - self.strategy
 
-    def get_past_actions(self, depth: int):
-        return self.actions[-depth:]
-
     def get_past_context(self, depth: int):
-        return self.context[-depth:]
-
-    def __str__(self):
-        return f"Player(ID={self.id}; S={self.strategy})"
+        min_len = min([floor(len(self.context)/2), depth]) + 1
+        return [self.context[-2*i] for i in range(1, min_len)]
