@@ -46,7 +46,7 @@ def prepare_configurations(runs, sim_args):
     return path, configurations
 
 
-def collapse_results(path, save_data):
+def collapse_results(path, save_data, output_path, depth):
     dist = []
     efcs = np.array([])
     
@@ -67,10 +67,13 @@ def collapse_results(path, save_data):
 
     efc_mu, efc_std = norm.fit(efcs)
 
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+
     if save_data:
-        new_file = f"{path}.pickle" 
+        new_file = f"{output_path}/{path.split('/')[-1]}.pickle" 
         with open(new_file, 'wb') as handle:
-            pickle.dump([mus, stds, efc_mu, efc_std], handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump([depth, mus, stds, efc_mu, efc_std], handle, protocol=pickle.HIGHEST_PROTOCOL)
             print(f"Saved cleaned data of distribution to {new_file}.")
 
     for file in os.listdir(path):
@@ -87,7 +90,7 @@ def run_simulation(args):
     sim.run()
 
 
-def run_simulations(run_args, sim_args, save_data=True):
+def run_simulations(run_args, sim_args, output_path="", save_data=True):
     runs, cores = run_args["runs"], run_args["cores"]
 
     path, configurations = prepare_configurations(runs, sim_args)
@@ -107,4 +110,5 @@ def run_simulations(run_args, sim_args, save_data=True):
 
     print("Simulations done. Processing results...")
 
-    return collapse_results(path, save_data)
+    depth = len(sim_args[0]["depth_distribution"])-1
+    return collapse_results(path, save_data, output_path, depth=depth)

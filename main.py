@@ -1,53 +1,10 @@
 import numpy as np
 import pickle
+import os
 from copy import deepcopy
 from runner import read_arguments, run_simulations
 from plotting import plot_stat_dist_fill_between
 
-
-# def e1_depth(maxdepth = 5, enhancement = (5,7), step = None):
-#     run_args, sim_args = read_arguments()
-#     depths = [[1.]]
-#     for n in range(1, maxdepth + 1):
-#         depth = np.zeros(n + 1)
-#         depth[0] = 0.9
-#         depth[-1] = 0.1
-#         depths.append(depth)
-    
-#     s = step if step else maxdepth + 1
-#     enhancements = np.linspace(enhancement[0], enhancement[1], s)
-
-#     sim_args_all = []
-
-#     for f in enhancements:
-#         aux = []
-#         for depth in depths:
-#             sim_args[0]["depth_distribution"] = depth
-#             sim_args[1]["F"] = f
-#             aux.append(deepcopy(sim_args))
-#         sim_args_all.append(aux)
- 
-#     efcs_avg = []
-#     efcs_all = []
-#     for i, f in enumerate(enhancements):
-#         aux_avg = []
-#         aux_all = []
-#         for j, depth in enumerate(depths):
-#             print("=" * 8 + f" Simulations with enhancement={f} depth={j} ")
-#             efc, efc_all = run_simulations(run_args, sim_args_all[i][j])
-#             aux_avg.append(efc)
-#             aux_all.append(efc_all)
-#         efcs_avg.append(aux_avg)
-#         efcs_all.append(aux_all)
-
-#     r = run_args["runs"]
-#     g = sim_args[0]["generations"]
-#     file = f"./outputs/e1_depth/e1_depth_{len(enhancements)}_{len(depths)}_{r}_{g}.pickle"
-#     with open(file, 'wb') as handle:
-#         pickle.dump(efcs_all, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#         print(f"Saved cleaned data to {file}")
-
-#     return efcs_all, enhancements
 
 
 # def e2_time_series(depths_list=()):
@@ -100,8 +57,11 @@ def get_path(run_args, sim_args, other_args):
 
 
 
-def e1_stationary_distribution():
+def e1_stationary_distribution(data_computed=False):
     run_args, sim_args, sd_args = read_arguments()
+
+    dir = get_path(run_args, sim_args, sd_args)
+    path = "./outputs/e1_sd/" + dir
 
     depths_list = sd_args["depths"]
     prob_imitation = sd_args["prob_imitation"]
@@ -112,29 +72,56 @@ def e1_stationary_distribution():
         depth[0] = prob_imitation
         depth[-1] = 1 - prob_imitation
         depths.append(depth)
-
-    sim_args_all = []
-    for depth in depths:
-        sim_args[0]["depth_distribution"] = depth
-        sim_args_all.append(deepcopy(sim_args))  
+    depths_list = [0] + depths_list
 
     all_mus = []
     all_stds = []
-    for j, depth in enumerate(depths):
-        print("=" * 8 + f" Simulations with depth={j} ")
-        mus, stds, efc_m, _ = run_simulations(run_args, sim_args_all[j], save_data=sd_args["save_data"])
-        all_mus.append(mus)
-        all_stds.append(stds)
+    all_efcs = []
+    if data_computed:
+        if not os.path.exists(path):
+            raise ValueError(f"Path {path} hasn't been created yet. First compute data.")
+        
+        order = []
+        for file in os.listdir(path):
+            if file.endswith(".png"):
+                continue
 
-    print("efc", efc_m)
+            with open(f"{path}/{file}", 'rb') as handle:
+                data = pickle.load(handle)
+                order.append(data[0])
+                all_mus.append(data[1])
+                all_stds.append(data[2])
+                all_efcs.append(data[3])
 
-    path = "./outputs/e1_sd/" + get_path(run_args, sim_args, sd_args)
+        if not order:
+            raise ValueError(f"Files haven't been saved. First compute data.")
 
-    plot_stat_dist_fill_between(all_mus, all_stds, labels=[0]+depths_list, save_fig=sd_args["save_fig"], path=path)
+        order = sorted(range(len(order)), key=lambda i: order[i])
+        all_mus = [all_mus[i] for i in order]
+        all_stds = [all_stds[i] for i in order]
+        all_efcs = [all_efcs[i] for i in order]
+    else:
+        sim_args_all = []
+        for depth in depths:
+            sim_args[0]["depth_distribution"] = depth
+            sim_args_all.append(deepcopy(sim_args))  
+
+        for j, depth in enumerate(depths):
+            print("=" * 8 + f" Simulations with depth = {depths_list[j]} ")
+            mus, stds, efcs, _ = run_simulations(run_args, sim_args_all[j], save_data=sd_args["save_data"], output_path=path)
+            all_mus.append(mus)
+            all_stds.append(stds)
+            all_efcs.append(efcs)
+
+    for i, efc in enumerate(all_efcs):
+        print(f"Depth {depths_list[i]}: {efc}")
+
+    plot_stat_dist_fill_between(all_mus, all_stds, labels=depths_list, save_fig=sd_args["save_fig"], path=path)
+
 
 if __name__ == "__main__":
     from time import perf_counter
     start = perf_counter()
-    e1_stationary_distribution()
+    e1_stationary_distribution(data_computed=False)
     end = perf_counter()
     print(f"Total time elapsed = {end - start} s")
